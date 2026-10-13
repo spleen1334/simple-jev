@@ -40,7 +40,6 @@ You need [uv](https://docs.astral.sh/uv/getting-started/installation/).
 The default tested setup is **macOS on Apple Silicon (ARM64), with Python 3.12**.
 The project pins Python to `>=3.12,<3.13`; uv can install it if needed.
 
-
 ```sh
 uv sync --extra dev
 uv run simple-jev download
@@ -68,6 +67,7 @@ print(scores)
 print("Best match:", max(scores, key=scores.get))
 ```
 
+Or use the CLI:
 
 ```sh
 uv run simple-jev classify --text 'I was charged twice.' --choices Billing 'Technical support'
@@ -102,7 +102,13 @@ metadata, but inference is local and prompts are not sent off-device.
 
 ## Explore the examples
 
-Run each with `uv run python examples/<name>.py`:
+Run all examples with quiet command output:
+
+```sh
+make -s examples
+```
+
+Or run one with `uv run python examples/email_classification.py`:
 
 | Example | What to explore |
 | --- | --- |
@@ -115,13 +121,25 @@ Run each with `uv run python examples/<name>.py`:
 | `intent_detection.py` | Try unrelated or multi-intent requests. |
 | `original_25_lines.py` | Follow the original idea's logits and softmax math. |
 
+Each result shows the input, the best match, percentage bars, raw logits, and log
+probabilities normalized over the supplied choices. Colors are automatic in a
+terminal and disabled when redirected. Use `NO_COLOR=1 make -s examples` for plain
+text, or `FORCE_COLOR=1 make -s examples` to force color.
+
+The shared helpers live in `src/simple_jev/display/`, not in the examples. They
+use built-in terminal formatting—no extra display dependency. The example loader
+prefers the cached model without a network metadata check and filters only the
+harmless small-context startup message; normal error handling remains intact.
+Call `show_result(..., model=model)` immediately after `classify()` to display
+scores for that input, before evaluating a different input with the same model.
+
 ## Read the implementation
 
 Start with `src/simple_jev/classifier.py`: build the Qwen3 prompt, reset and
 evaluate the model, select the answer-letter logits, then apply softmax.
 Comments and docstrings explain the numerical details beside the calculation.
 `examples/original_25_lines.py` preserves the core logits math and teaching
-comments, adapted to the shared `load_model()` setup—not a byte-for-byte copy.
+comments, adapted to the shared model setup—not a byte-for-byte copy.
 Run it like the other examples; no separate dependencies or compilation needed.
 
 ## Things to keep in mind
@@ -137,6 +155,14 @@ Run it like the other examples; no separate dependencies or compilation needed.
   the input can affect results. Try an “Other” category and compare against
   answers you labeled yourself. Don't rely on these scores alone for security
   or other high-impact decisions.
+
+## Project layout
+
+- `src/simple_jev/classifier.py` — model loading, prompts, and scoring.
+- `src/simple_jev/cli.py` — command-line entry point; `--json` stays machine-readable.
+- `src/simple_jev/display/` — shared presentation and quiet example-loading helpers.
+- `examples/` — eight runnable learning experiments.
+- `tests/` — tests using model doubles, without model downloads.
 
 ## Development shortcuts
 

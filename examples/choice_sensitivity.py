@@ -3,9 +3,8 @@
 Tweak the permutations or synonyms; this demonstration is not a bias benchmark.
 """
 
-from _display import load_example_model, show_result
-
 from simple_jev import classify
+from simple_jev.display import load_example_model, show_result
 
 
 def main() -> None:

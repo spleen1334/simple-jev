@@ -3,9 +3,8 @@
 The example only suggests a category. It does not execute commands or call tools.
 """
 
-from _display import load_example_model, show_result
-
 from simple_jev import classify
+from simple_jev.display import load_example_model, show_result
 
 
 def main() -> None:

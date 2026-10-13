@@ -3,9 +3,8 @@
 Load once into this Python process and reuse it for every input.
 """
 
-from _display import load_example_model, show_result
-
 from simple_jev import classify
+from simple_jev.display import load_example_model, show_result
 
 
 def main() -> None:

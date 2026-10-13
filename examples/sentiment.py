@@ -3,9 +3,8 @@
 Compare how the available categories change the interpretation of the same text.
 """
 
-from _display import load_example_model, show_result
-
 from simple_jev import classify
+from simple_jev.display import load_example_model, show_result
 
 
 def main() -> None:
