@@ -1,13 +1,20 @@
 import json
 
-import httpx
 import pytest
 
+from simple_jev import classifier as classifier_module
 from simple_jev import cli
-from simple_jev.classifier import build_prompt
+from simple_jev.classifier import DEFAULT_INSTRUCTION
 
 
-def test_classify_json_is_pure_choice_mapping_and_forwards_flags(ollama, capsys):
+def test_classify_json_is_pure_choice_mapping_and_forwards_flags(monkeypatch, capsys):
+    calls = []
+
+    def classify(text, choices, **kwargs):
+        calls.append((text, choices, kwargs))
+        return {"first": 0.25, "second": 0.75}
+
+    monkeypatch.setattr(cli, "classify", classify)
     assert (
         cli.main(
             [
@@ -19,12 +26,8 @@ def test_classify_json_is_pure_choice_mapping_and_forwards_flags(ollama, capsys)
                 "second",
                 "--instruction",
                 "Pick one.",
-                "--model",
-                "qwen3:custom",
-                "--server-url",
-                "http://localhost:11434/",
-                "--timeout",
-                "17.5",
+                "--model-path",
+                "/models/custom.gguf",
                 "--n-ctx",
                 "128",
                 "--json",
@@ -35,23 +38,54 @@ def test_classify_json_is_pure_choice_mapping_and_forwards_flags(ollama, capsys)
 
     output = capsys.readouterr()
     assert output.err == ""
-    assert json.loads(output.out) == pytest.approx(
-        {"first": 0.2689414214, "second": 0.7310585786}
-    )
-    assert len(ollama.requests) == 1
-    request, kwargs = ollama.requests[0]
-    assert str(request.url) == "http://localhost:11434/api/generate"
-    assert kwargs["timeout"] == 17.5
-    assert kwargs["json"]["model"] == "qwen3:custom"
-    assert kwargs["json"]["options"]["num_ctx"] == 128
-    assert kwargs["json"]["prompt"] == build_prompt(
-        "café", ["first", "second"], "Pick one."
-    )
+    assert json.loads(output.out) == {"first": 0.25, "second": 0.75}
+    assert calls == [
+        (
+            "café",
+            ["first", "second"],
+            {
+                "instruction": "Pick one.",
+                "model_path": "/models/custom.gguf",
+                "n_ctx": 128,
+            },
+        )
+    ]
 
 
-def test_classify_human_output_is_simple_and_notes_uncalibrated_confidence(
-    ollama, capsys
+def test_classify_default_settings_are_forwarded_without_explicit_download(
+    monkeypatch, capsys
 ):
+    calls = []
+
+    def classify(text, choices, **kwargs):
+        calls.append((text, choices, kwargs))
+        return {"first": 0.25, "second": 0.75}
+
+    def unexpected():
+        pytest.fail("The classify command must leave model loading to classify().")
+
+    monkeypatch.setattr(cli, "classify", classify)
+    monkeypatch.setattr(cli, "download_model", unexpected)
+    assert (
+        cli.main(
+            ["classify", "--text", "input", "--choices", "first", "second", "--json"]
+        )
+        == 0
+    )
+    assert calls == [
+        (
+            "input",
+            ["first", "second"],
+            {"instruction": DEFAULT_INSTRUCTION, "model_path": None, "n_ctx": 512},
+        )
+    ]
+    assert capsys.readouterr().err == ""
+
+
+def test_classify_human_output_is_unchanged_and_notes_uncalibrated_confidence(
+    monkeypatch, fake_model, capsys
+):
+    monkeypatch.setattr(classifier_module, "load_model", lambda **kwargs: fake_model)
     assert (
         cli.main(["classify", "--text", "input", "--choices", "first", "second"]) == 0
     )
@@ -66,80 +100,84 @@ def test_classify_human_output_is_simple_and_notes_uncalibrated_confidence(
     ]
 
 
-def test_download_forwards_keyword_arguments_and_prints_model(monkeypatch, capsys):
+def test_download_takes_no_arguments_and_prints_cached_model_path(monkeypatch, capsys):
     calls = []
 
-    def download(**kwargs):
-        calls.append(kwargs)
-        return kwargs["model"]
+    def download():
+        calls.append(())
+        return "/cache/snapshots/revision/Qwen3-0.6B-Q8_0.gguf"
 
     monkeypatch.setattr(cli, "download_model", download)
     assert cli.main(["download"]) == 0
-    assert (
-        cli.main(
-            [
-                "download",
-                "--model",
-                "qwen3:custom",
-                "--server-url",
-                "https://ollama.example/",
-                "--timeout",
-                "30",
-            ]
-        )
-        == 0
-    )
-
-    assert calls == [
-        {
-            "model": "qwen3:0.6b",
-            "server_url": "http://127.0.0.1:11434",
-            "timeout": 600.0,
-        },
-        {
-            "model": "qwen3:custom",
-            "server_url": "https://ollama.example/",
-            "timeout": 30.0,
-        },
-    ]
+    assert calls == [()]
     output = capsys.readouterr()
-    assert output.out == "qwen3:0.6b\nqwen3:custom\n"
+    assert output.out == "/cache/snapshots/revision/Qwen3-0.6B-Q8_0.gguf\n"
     assert output.err == ""
 
 
-def test_invalid_choices_report_error_without_http(ollama, capsys):
+def test_invalid_choices_report_error_without_loading_or_downloading(
+    monkeypatch, capsys
+):
+    def unexpected(*args, **kwargs):
+        pytest.fail("Invalid choices must not load or download a model.")
+
+    monkeypatch.setattr(classifier_module, "load_model", unexpected)
+    monkeypatch.setattr(classifier_module, "download_model", unexpected)
     with pytest.raises(SystemExit) as error:
         cli.main(["classify", "--text", "input", "--choices", "only"])
 
     assert error.value.code == 1
-    assert ollama.requests == []
     output = capsys.readouterr()
     assert output.out == ""
     assert output.err.startswith("Error: ")
-    assert "2" in output.err and "20" in output.err
+    assert "2" in output.err and "26" in output.err
 
 
-@pytest.mark.parametrize(
-    ("command", "failure"),
-    [
-        ("classify", ValueError("Update Ollama to support logprobs.")),
-        ("download", httpx.ConnectError("connection refused")),
-    ],
-)
-def test_errors_exit_cleanly_without_traceback(command, failure, monkeypatch, capsys):
+@pytest.mark.parametrize("exception", [ValueError, RuntimeError, OSError])
+def test_errors_exit_cleanly_without_traceback(exception, monkeypatch, capsys):
+    failure = exception("model unavailable")
+
     def fail(*args, **kwargs):
         raise failure
 
     monkeypatch.setattr(cli, "classify", fail)
     monkeypatch.setattr(cli, "download_model", fail)
-    args = [command]
-    if command == "classify":
-        args += ["--text", "input", "--choices", "first", "second"]
+    for args in (
+        ["classify", "--text", "input", "--choices", "first", "second"],
+        ["download"],
+    ):
+        with pytest.raises(SystemExit) as error:
+            cli.main(args)
+        assert error.value.code == 1
+        output = capsys.readouterr()
+        assert output.out == ""
+        assert output.err == f"Error: {failure}\n"
 
-    with pytest.raises(SystemExit) as error:
-        cli.main(args)
 
-    assert error.value.code == 1
-    output = capsys.readouterr()
-    assert output.out == ""
-    assert output.err == f"Error: {failure}\n"
+def test_removed_server_options_and_download_options_are_parser_errors(capsys):
+    classify_args = ["classify", "--text", "input", "--choices", "first", "second"]
+    for option, value in (
+        ("--server-url", "http://localhost:11434"),
+        ("--timeout", "30"),
+        ("--model", "qwen3:custom"),
+    ):
+        with pytest.raises(SystemExit) as error:
+            cli.main([*classify_args, option, value])
+        assert error.value.code == 2
+        output = capsys.readouterr()
+        assert output.out == ""
+        assert "unrecognized arguments" in output.err
+
+    for option, value in (
+        ("--model", "qwen3:custom"),
+        ("--server-url", "http://localhost:11434"),
+        ("--timeout", "30"),
+        ("--model-path", "/models/custom.gguf"),
+        ("--n-ctx", "128"),
+    ):
+        with pytest.raises(SystemExit) as error:
+            cli.main(["download", option, value])
+        assert error.value.code == 2
+        output = capsys.readouterr()
+        assert output.out == ""
+        assert "unrecognized arguments" in output.err

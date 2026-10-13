@@ -1,22 +1,14 @@
-# /// script
-# requires-python = ">=3.12"
-# dependencies = ["huggingface-hub", "llama-cpp-python", "numpy"]
-# ///
+"""The article's original idea, annotated and adapted to the shared project setup."""
 
 import numpy
-from llama_cpp import Llama
 
-# This reference loads a GGUF into Python, unlike the main Ollama HTTP API.
+from simple_jev import load_model
+
+# Use the same local model loader as the other examples.
 # logits_all=True retains score rows so we can inspect the final prompt position.
 # Other GGUFs need compatible prompt formatting and single-token letter labels.
 
-model = Llama.from_pretrained(
-    repo_id="Qwen/Qwen3-0.6B-GGUF",
-    filename="Qwen3-0.6B-Q8_0.gguf",
-    n_ctx=512,
-    logits_all=True,
-    verbose=False,
-)
+model = load_model()
 
 # A/B/C are assumed to each tokenize to one token with this tokenizer.
 # Long choice words may need several tokens; scoring their first token is not

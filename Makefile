@@ -1,10 +1,8 @@
-.PHONY: setup serve download-model demo examples test lint format check
+.PHONY: setup download-model demo examples test lint format check
 
 setup:
 	uv sync --extra dev
 
-serve:
-	ollama serve
 
 download-model:
 	uv run simple-jev download
@@ -20,6 +18,7 @@ examples:
 	uv run python examples/choice_sensitivity.py
 	uv run python examples/language_detection.py
 	uv run python examples/intent_detection.py
+	uv run python examples/original_25_lines.py
 
 test:
 	uv run --extra dev pytest

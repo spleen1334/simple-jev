@@ -1,9 +1,9 @@
 """Classify emails sequentially with the same model; tweak or extend the texts.
 
-Each call is an HTTP request. Ollama, not Python, keeps the model warm for 5m.
+Load once into this Python process and reuse it for every input.
 """
 
-from simple_jev import classify
+from simple_jev import classify, load_model
 
 
 def main() -> None:
@@ -13,9 +13,9 @@ def main() -> None:
         "Send your password to verify your account and avoid suspension.",
     )
     choices = ("Legitimate", "Spam", "Phishing")
-    model = "qwen3:0.6b"
+    model = load_model()
 
-    # No batch API or Python model lifecycle is needed for sequential requests.
+    # Pass the same local model to each call; classify resets its evaluation state.
     for text in texts:
         scores = classify(
             text,

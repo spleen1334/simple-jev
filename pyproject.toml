@@ -7,9 +7,10 @@ name = "simple-jev"
 version = "0.1.0"
 description = "An educational local, one-token multiple-choice classifier"
 readme = "README.md"
-requires-python = ">=3.12,<3.14"
+requires-python = ">=3.12,<3.13"
 dependencies = [
-    "httpx>=0.28,<1",
+    "llama-cpp-python==0.3.19",
+    "huggingface-hub>=0.34,<2",
     "numpy>=2.2,<3",
 ]
 
@@ -18,6 +19,19 @@ dev = ["pytest>=8.3,<10", "ruff>=0.12,<1"]
 
 [project.scripts]
 simple-jev = "simple_jev.cli:main"
+
+# This experiment uses the verified precompiled Apple Silicon Metal wheel.
+# Never silently fall back to compiling the inference runtime.
+[tool.uv]
+no-build-package = ["llama-cpp-python"]
+
+[[tool.uv.index]]
+name = "llama-metal"
+url = "https://abetlen.github.io/llama-cpp-python/whl/metal"
+explicit = true
+
+[tool.uv.sources]
+llama-cpp-python = { index = "llama-metal" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/simple_jev"]
