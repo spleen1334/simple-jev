@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "simple-jev"
+version = "0.1.0"
+description = "An educational local, one-token multiple-choice classifier"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "httpx>=0.28,<1",
+    "numpy>=2.2,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<10", "ruff>=0.12,<1"]
+
+[project.scripts]
+simple-jev = "simple_jev.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/simple_jev"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
+extraPaths = ["src"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
