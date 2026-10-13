@@ -2,7 +2,7 @@
 
 import numpy
 
-from simple_jev.display import load_example_model, show_result
+from simple_jev.helpers import load_example_model, show_result
 
 # Use the same local model loader as the other examples.
 # logits_all=True retains score rows so we can inspect the final prompt position.

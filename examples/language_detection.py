@@ -4,7 +4,7 @@ This is classification, not translation: the output is a score per language.
 """
 
 from simple_jev import classify
-from simple_jev.display import load_example_model, show_result
+from simple_jev.helpers import load_example_model, show_result
 
 
 def main() -> None:

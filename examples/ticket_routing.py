@@ -4,7 +4,7 @@ Try tickets that span departments. A routing suggestion is not a resolution.
 """
 
 from simple_jev import classify
-from simple_jev.display import load_example_model, show_result
+from simple_jev.helpers import load_example_model, show_result
 
 
 def main() -> None:
