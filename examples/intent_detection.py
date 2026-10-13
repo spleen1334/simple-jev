@@ -3,12 +3,15 @@
 The example only suggests a category. It does not execute commands or call tools.
 """
 
+from _display import load_example_model, show_result
+
 from simple_jev import classify
 
 
 def main() -> None:
     text = "Could you play some relaxing music?"
     choices = ("Play music", "Check weather", "Control lights", "Other")
+    model = load_example_model()
 
     # 'Other' offers an answer for unrelated requests, not guaranteed abstention.
     scores = classify(
@@ -17,11 +20,9 @@ def main() -> None:
         instruction=(
             "Choose the user's main intent. Use Other if none of the tasks fit."
         ),
+        model=model,
     )
-    print(f"Request: {text}")
-    print(f"Intent: {max(scores, key=scores.get)}")
-    for choice, probability in scores.items():
-        print(f"  {choice}: {probability:.3f}")
+    show_result("Intent detection", text, scores, model=model)
 
 
 if __name__ == "__main__":

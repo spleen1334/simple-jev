@@ -3,12 +3,15 @@
 Try tickets that span departments. A routing suggestion is not a resolution.
 """
 
+from _display import load_example_model, show_result
+
 from simple_jev import classify
 
 
 def main() -> None:
     ticket = "I was charged twice for my subscription. Can you refund one charge?"
     choices = ("Billing", "Technical support", "Account access", "Sales")
+    model = load_example_model()
 
     # Descriptions ground short team names in this organization's routing policy.
     scores = classify(
@@ -21,10 +24,9 @@ def main() -> None:
             "Account access handles sign-in, passwords, and locked accounts. "
             "Sales handles pricing questions and new purchases."
         ),
+        model=model,
     )
-    print(f"Suggested team: {max(scores, key=scores.get)}")
-    for choice, probability in scores.items():
-        print(f"  {choice}: {probability:.3f}")
+    show_result("Support ticket routing", ticket, scores, model=model)
 
 
 if __name__ == "__main__":

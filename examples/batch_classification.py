@@ -3,7 +3,9 @@
 Load once into this Python process and reuse it for every input.
 """
 
-from simple_jev import classify, load_model
+from _display import load_example_model, show_result
+
+from simple_jev import classify
 
 
 def main() -> None:
@@ -13,20 +15,17 @@ def main() -> None:
         "Send your password to verify your account and avoid suspension.",
     )
     choices = ("Legitimate", "Spam", "Phishing")
-    model = load_model()
+    model = load_example_model()
 
     # Pass the same local model to each call; classify resets its evaluation state.
-    for text in texts:
+    for index, text in enumerate(texts, start=1):
         scores = classify(
             text,
             choices,
             instruction="Classify this email by its primary purpose.",
             model=model,
         )
-        print(f"\n{text}")
-        print(f"Prediction: {max(scores, key=scores.get)}")
-        for choice, probability in scores.items():
-            print(f"  {choice}: {probability:.3f}")
+        show_result(f"Email batch · {index}/{len(texts)}", text, scores, model=model)
 
 
 if __name__ == "__main__":

@@ -1,14 +1,13 @@
 """The article's original idea, annotated and adapted to the shared project setup."""
 
 import numpy
-
-from simple_jev import load_model
+from _display import load_example_model, show_result
 
 # Use the same local model loader as the other examples.
 # logits_all=True retains score rows so we can inspect the final prompt position.
 # Other GGUFs need compatible prompt formatting and single-token letter labels.
 
-model = load_model()
+model = load_example_model()
 
 # A/B/C are assumed to each tokenize to one token with this tokenizer.
 # Long choice words may need several tokens; scoring their first token is not
@@ -49,13 +48,19 @@ logprobs = choice_logits - numpy.logaddexp.reduce(choice_logits)
 # These are relative to A/B/C only, not calibrated chances of being correct.
 probabilities = numpy.exp(logprobs)
 
-for name, scores in (
-    ("Logits", choice_logits),
-    ("Log probabilities", logprobs),
-    ("Probabilities", probabilities),
-):
-    values = numpy.round(scores.astype(float), 3).tolist()
-    print(f"{name}:", dict(zip(choices, values, strict=True)))
+show_result(
+    "Original article · local model",
+    email,
+    dict(zip(choices, (float(value) for value in probabilities), strict=True)),
+    details={
+        "Logits": dict(
+            zip(choices, (float(value) for value in choice_logits), strict=True)
+        ),
+        "Log probabilities": dict(
+            zip(choices, (float(value) for value in logprobs), strict=True)
+        ),
+    },
+)
 
 # Logits: {'Legitimate': 26.254, 'Spam': 27.262, 'Phishing': 29.614}
 # Log probabilities: {'Legitimate': -3.482, 'Spam': -2.474, 'Phishing': -0.122}

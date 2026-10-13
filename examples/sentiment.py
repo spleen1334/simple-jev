@@ -3,23 +3,24 @@
 Compare how the available categories change the interpretation of the same text.
 """
 
+from _display import load_example_model, show_result
+
 from simple_jev import classify
 
 
 def main() -> None:
     text = "The delivery was late, but the product works beautifully."
     choices = ("Positive", "Neutral", "Negative")
+    model = load_example_model()
 
     # A forced choice can hide nuance: 'Neutral' need not mean mixed sentiment.
     scores = classify(
         text,
         choices,
         instruction="Classify the overall sentiment of this review.",
+        model=model,
     )
-    print(f"Review: {text}")
-    print(f"Prediction: {max(scores, key=scores.get)}")
-    for choice, probability in scores.items():
-        print(f"  {choice}: {probability:.3f}")
+    show_result("Sentiment", text, scores, model=model)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,8 @@
 Tweak the permutations or synonyms; this demonstration is not a bias benchmark.
 """
 
+from _display import load_example_model, show_result
+
 from simple_jev import classify
 
 
@@ -14,19 +16,28 @@ def main() -> None:
         ("Satisfied", "Mixed or indifferent", "Dissatisfied"),
     )
 
+    titles = ("Original order", "Reversed order", "Different wording")
+    model = load_example_model()
+
     # Reordering changes letter assignments; rewording changes category meaning.
     # Keep the text and instruction fixed to isolate those two experiments.
-    for choices in choice_sets:
+    for title, choices in zip(titles, choice_sets, strict=True):
         scores = classify(
             text,
             choices,
             instruction="Classify the overall sentiment of this review.",
+            model=model,
         )
-        print(f"\nChoices: {choices}")
-        print(f"Prediction: {max(scores, key=scores.get)}")
-        for choice, probability in scores.items():
-            print(f"  {choice}: {probability:.3f}")
-    print("\nOrdering and wording can change scores; changes are not guaranteed.")
+        show_result(
+            f"Choice sensitivity · {title}",
+            text,
+            scores,
+            model=model,
+            note=(
+                "Only answer order/wording changed. Changes are not guaranteed. "
+                "Scores are not calibrated confidence."
+            ),
+        )
 
 
 if __name__ == "__main__":
